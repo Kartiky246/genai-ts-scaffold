@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { config } from "../env.config.js";
 
 export enum OpenAiModel {
     GPT_4O = 'gpt-4o',
@@ -13,7 +14,7 @@ class OpenAiFactory{
     openAiInstance!: OpenAI;
     constructor(apiKey?: string, baseURL?: string){
         this.openAiInstance = new OpenAI({
-            apiKey : apiKey ?? process.env.OPENAI_API_KEY,
+            apiKey : apiKey ?? config.OPENAI_API_KEY,
             ...(baseURL && {baseURL})
         })
     }

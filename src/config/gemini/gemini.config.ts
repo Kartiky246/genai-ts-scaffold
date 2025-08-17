@@ -1,6 +1,4 @@
-import 'dotenv/config';
 import { OpenAiFactory } from '../openAi/openAi.config.js';
-import OpenAI from 'openai';
 import { config } from '../env.config.js';
 
 export enum GeminiModel {
@@ -12,10 +10,8 @@ export enum GeminiModel {
 }
 
 class GeminiFactory extends OpenAiFactory {
-  geminiInstance: OpenAI;
   constructor() {
     super(config.GEMINI_API_KEY, config.GEMINI_BASE_URL);
-    this.geminiInstance = new OpenAI({ apiKey: config.GEMINI_API_KEY });
   }
 }
 
