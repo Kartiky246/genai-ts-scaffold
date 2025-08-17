@@ -2,14 +2,16 @@ import { PromptRole } from "../../types/prompt.types";
 
 export type Example = {
     user: string;
-    assistant: { step: string; content: string }[];
+    assistant: { step: string; content: string, toolName?:string, input?:string | number }[];
   };
 
   export enum COT_STEPS {
     START = 'START',
     THINK ='THINK',
     EVALUATE = 'EVALUATE',
-    OUTPUT = 'OUTPUT'
+    OUTPUT = 'OUTPUT',
+    TOOL ='TOOL',
+    OBSERVE_TOOL_RESPONSE = 'OBSERVE_TOOL_RESPONSE'
   }
   
   export interface SystemPromptInput {
@@ -18,6 +20,7 @@ export type Example = {
     outputFormat?: Record<COT_STEPS, {content: string}>;
     rules?: string[];
     examples?: Example[];
+    tools?: {name: string, description: string}[]
   }
 
 const defaultExamples: Example[] = [
@@ -27,6 +30,8 @@ const defaultExamples: Example[] = [
         { step: "START", content: "The user wants me to solve 3 + 4 * 10 - 4 * 3 maths problem" },
         { step: "THINK", content: "This is typical math problem where we use BODMAS formula for calculation" },
         { step: "EVALUATE", content: "Alright, Going good" },
+        { step: "TOOL", toolName:'getWeatherByCity', input: 'Rewari', content: 'I will call getWeatherByCity to get temperature of rewari ' },
+        {step: "OBSERVE_TOOL_RESPONSE", content: "in the json output of tool call i can see temperature of rewari is 29 Cel."},
         { step: "THINK", content: "Lets breakdown the problem step by step" },
         { step: "EVALUATE", content: "Alright, Going good" },
         { step: "THINK", content: "As per bodmas, first lets solve all multiplications and divisions" },
@@ -55,6 +60,8 @@ const defaultExamples: Example[] = [
 const defaultRules: string[] = [
     "Strictly follow the output JSON format.",
     "Always follow the sequence: START, THINK, EVALUATE, then OUTPUT.",
+    "If you think you need to use a tool then in next step give content, toolName and input as output",
+    "Read tool description properly to understand the input and output, only send the relevant input in your response",
     "After every THINK step, an EVALUATE step is performed manually; wait for it before proceeding.",
     "Perform only one step at a time and wait for the next step.",
     "Make multiple THINK steps before producing the final OUTPUT."
@@ -63,7 +70,9 @@ const defaultRules: string[] = [
   
   
   export function buildSystemPrompt(input: SystemPromptInput): {role: PromptRole.SYSTEM, content: string} {
-    const { description, steps } = input;
+    const { description, steps} = input;
+
+    const tools = input.tools;
     
     const examples = input.examples ?? defaultExamples;
 
@@ -71,10 +80,19 @@ const defaultRules: string[] = [
 
     const outputFormat = input.outputFormat ?? {
       "step": "START | THINK | EVALUATE | OUTPUT",
-      "content": "string"
+      "content": "string",
+      "input": "string",
+      "toolName": "string"
     };
     
 
+    const toolsSection = tools?.length ?
+        `You have following tools available: \n
+        ${tools.map((v,idx)=>{
+          `${idx+1}) tool Name: ${v.name}
+          tool description : ${v.description}`
+        })}\n
+        Each tool function is in camel case` :''
   
     const stepsSection = steps.length
       ? `Steps:\n${steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n`
@@ -113,6 +131,7 @@ const defaultRules: string[] = [
           You are an AI assistant.
           Description:
           ${description}   
+          ${toolsSection}
           ${stepsSection}
           ${outputFormatSection}
           ${rulesSection}
