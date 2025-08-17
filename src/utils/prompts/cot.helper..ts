@@ -1,3 +1,5 @@
+import { PromptRole } from "../../types/prompt.types";
+
 export type Example = {
     user: string;
     assistant: { step: string; content: string }[];
@@ -13,7 +15,7 @@ export type Example = {
   export interface SystemPromptInput {
     description: string;
     steps: COT_STEPS[];
-    outputFormat: Record<COT_STEPS, {content: string}>;
+    outputFormat?: Record<COT_STEPS, {content: string}>;
     rules?: string[];
     examples?: Example[];
   }
@@ -60,12 +62,18 @@ const defaultRules: string[] = [
   
   
   
-  export function buildSystemPrompt(input: SystemPromptInput): string {
-    const { description, steps, outputFormat } = input;
+  export function buildSystemPrompt(input: SystemPromptInput): {role: PromptRole.SYSTEM, content: string} {
+    const { description, steps } = input;
     
     const examples = input.examples ?? defaultExamples;
 
     const rules = input.rules ?? defaultRules;
+
+    const outputFormat = input.outputFormat ?? {
+      "step": "START | THINK | EVALUATE | OUTPUT",
+      "content": "string"
+    };
+    
 
   
     const stepsSection = steps.length
@@ -98,16 +106,17 @@ const defaultRules: string[] = [
           .join("\n\n")}`
       : "";
   
-    return `
-  You are an AI assistant.
-  
-  Description:
-  ${description}
-  
-  ${stepsSection}
-  ${rulesSection}
-  ${outputFormatSection}
-  ${examplesSection}
-    `.trim();
+    return {
+      role: PromptRole.SYSTEM,
+      content: 
+      `  
+          You are an AI assistant.
+          Description:
+          ${description}   
+          ${stepsSection}
+          ${rulesSection}
+          ${outputFormatSection}
+          ${examplesSection}
+    `.trim(),
+    }
   }
-  
