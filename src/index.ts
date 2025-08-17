@@ -1,4 +1,3 @@
-import "dotenv/config";
 import GeminiClient, { GeminiModel } from "./config/gemini/gemini.config.js";
 import {PromptRole } from "./types/prompt.types.js";
 
