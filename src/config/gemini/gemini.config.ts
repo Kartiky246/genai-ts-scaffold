@@ -15,4 +15,4 @@ class GeminiFactory extends OpenAiFactory {
   }
 }
 
-export default new GeminiFactory().client;
+export default new GeminiFactory();
