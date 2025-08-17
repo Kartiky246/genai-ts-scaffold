@@ -3,7 +3,10 @@ import GeminiInstance, { GeminiModel } from "./config/gemini/gemini.config.js";
 import {PromptRole } from "./types/prompt.types.js";
 import { buildSystemPrompt, COT_STEPS } from "./utils/prompts/cot.helper..js";
 import { PromptMessage } from "./types/prompt.types.js";
+import { json } from "stream/consumers";
 
+
+// zero shot prompting
 const main = async function(){
     const client = await GeminiInstance.chatCompletions({
         model: GeminiModel.GEMINI_2_5_FLASH,
@@ -29,11 +32,12 @@ const travelDestinationSuggestion = async function(messages: PromptMessage[]){
             response_format: { type: "json_object" }
         })
         const rawContent = client.choices[0].message.content!;
-        const parsedContent = JSON.parse(rawContent);
         messages.push({
             role: PromptRole.ASSISTANT,
-            content: JSON.stringify(parsedContent),
+            content: rawContent,
         })
+
+        const parsedContent = JSON.parse(rawContent);
 
         if(parsedContent.step === COT_STEPS.START){
             console.log(`🚀 ${parsedContent.content}`)
@@ -54,10 +58,6 @@ const travelDestinationSuggestion = async function(messages: PromptMessage[]){
 }
 
 
-const systemPormpt = buildSystemPrompt({
-    description: 'You are a travel agent that suggest travel destination to people',
-    steps: [COT_STEPS.START, COT_STEPS.THINK, COT_STEPS.EVALUATE, COT_STEPS.OUTPUT],
-})
 const getUserInput = (query: string): PromptMessage =>{
     return {
         role: PromptRole.USER,
@@ -65,4 +65,10 @@ const getUserInput = (query: string): PromptMessage =>{
     }
 }
 
-travelDestinationSuggestion([systemPormpt, getUserInput('Suggest solo travel destination in the month of septermber in india')])
+travelDestinationSuggestion([
+    buildSystemPrompt({
+        description: 'You are a travel agent that help in making travel plans',
+        steps: [COT_STEPS.START, COT_STEPS.THINK, COT_STEPS.EVALUATE, COT_STEPS.OUTPUT],
+    }),
+     getUserInput('How to go to paris, France from rewari, India')
+    ])

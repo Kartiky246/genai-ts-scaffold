@@ -114,8 +114,8 @@ const defaultRules: string[] = [
           Description:
           ${description}   
           ${stepsSection}
-          ${rulesSection}
           ${outputFormatSection}
+          ${rulesSection}
           ${examplesSection}
     `.trim(),
     }
