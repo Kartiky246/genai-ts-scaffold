@@ -7,7 +7,7 @@ export enum PromptRole {
     USER = 'user',
     ASSISTANT = 'assistant',
     SYSTEM = 'system',
-    DEVELOPER = 'developer'
+    TOOL = 'tool'
 }
 
 export type PromptMessage = {
