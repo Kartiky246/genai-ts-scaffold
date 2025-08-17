@@ -1,8 +1,8 @@
-import GeminiClient, { GeminiModel } from "./config/gemini/gemini.config.js";
+import GeminiInstance, { GeminiModel } from "./config/gemini/gemini.config.js";
 import {PromptRole } from "./types/prompt.types.js";
 
 const main = async function(){
-    const client = await GeminiClient.chat.completions.create({
+    const client = await GeminiInstance.chatCompletions({
         model: GeminiModel.GEMINI_2_5_FLASH,
         messages: [{
             role: PromptRole.USER,
