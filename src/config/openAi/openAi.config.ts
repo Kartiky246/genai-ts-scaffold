@@ -10,6 +10,9 @@ export enum OpenAiModel {
   GPT_4O_2_MINI = "gpt-4o-2-mini",
 }
 
+type ChatCompletionRequest = OpenAI.Chat.Completions.ChatCompletionCreateParams;
+
+
 class OpenAiFactory {
   private openAiInstance: OpenAI;
 
@@ -24,7 +27,7 @@ class OpenAiFactory {
     return this.openAiInstance;
   }
 
-  get chatCompletions(): OpenAI.Chat.Completions['create'] {
+  get chatCompletions() {
     return this.instance.chat.completions.create.bind(this.instance.chat.completions);
   }
 }
