@@ -10,8 +10,9 @@ export type Example = {
     THINK ='THINK',
     EVALUATE = 'EVALUATE',
     OUTPUT = 'OUTPUT',
-    TOOL ='TOOL',
-    OBSERVE_TOOL_RESPONSE = 'OBSERVE_TOOL_RESPONSE'
+    TOOL_CALL ='TOOL_CALL',
+    OBSERVE = 'OBSERVE',
+    TOOL_ANALYZE= 'TOOL_ANALYZE'
   }
   
   export interface SystemPromptInput {
@@ -25,47 +26,33 @@ export type Example = {
 
 const defaultExamples: Example[] = [
     {
-      user: "Can you solve 3 + 4 * 10 - 4 * 3",
+      user: "Can you tell me the weather of Rewari, Haryana?",
       assistant: [
-        { step: "START", content: "The user wants me to solve 3 + 4 * 10 - 4 * 3 maths problem" },
-        { step: "THINK", content: "This is typical math problem where we use BODMAS formula for calculation" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "TOOL", toolName:'getWeatherByCity', input: 'Rewari', content: 'I will call getWeatherByCity to get temperature of rewari ' },
-        {step: "OBSERVE_TOOL_RESPONSE", content: "in the json output of tool call i can see temperature of rewari is 29 Cel."},
+        { step: "START", content: "The user wants me to get the current weather of Rewari which is a city in Haryana" },
         { step: "THINK", content: "Lets breakdown the problem step by step" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "As per bodmas, first lets solve all multiplications and divisions" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "So, first we need to solve 4 * 10 that is 40" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "Great, now the equation looks like 3 + 40 - 4 * 3" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "Now, I can see one more multiplication to be done that is 4 * 3 = 12" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "Great, now the equation looks like 3 + 40 - 12" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "As we have done all multiplications lets do the add and subtract" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "so, 3 + 40 = 43" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "new equations look like 43 - 12 which is 31" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "THINK", content: "great, all steps are done and final result is 31" },
-        { step: "EVALUATE", content: "Alright, Going good" },
-        { step: "OUTPUT", content: "3 + 4 * 10 - 4 * 3 = 31" }
+        { step: "THINK", content: "Here current data is required, so I need to check if any tool is available to fetch current data" },
+        { step: "TOOL_ANALYZE", content: "getWeatherByCity tool is present for this task, let me check it's description to get the desired input for this tool function" },
+        { step: "TOOL_CALL", toolName:'getWeatherByCity', input: 'rewari', content: 'I will call getWeatherByCity to get temperature of rewari ' },
+        {step: "OBSERVE", content: "The tweather of rewari is cloudy with temo 29 Cel"},
+        { step: "THINK", content: "Great, I got the weather of rewari" },
+        { step: "OUTPUT", content: "The weather of rewari is cloudy and temperature is 29 Cel." }
       ]
     }
   ];
 
 const defaultRules: string[] = [
-    "Strictly follow the output JSON format.",
-    "Always follow the sequence: START, THINK, EVALUATE, then OUTPUT.",
-    "If you think you need to use a tool then in next step give content, toolName and input as output",
-    "Read tool description properly to understand the input and output, only send the relevant input in your response",
-    "After every THINK step, an EVALUATE step is performed manually; wait for it before proceeding.",
-    "Perform only one step at a time and wait for the next step.",
-    "Make multiple THINK steps before producing the final OUTPUT."
-  ];
+  "Always return a valid JSON object matching the required schema.",
+  "Follow the step sequence strictly: START → THINK → (optional: TOOL_ANALYZE → TOOL_CALL → OBSERVE) → OUTPUT.",
+  "If no tool is required for the task, skip TOOL_ANALYZE, TOOL, and OBSERVE steps.",
+  "Only perform one step per response. Do not combine multiple steps in a single output.",
+  "In the TOOL step, include: 'toolName' (string), 'input' (structured parameters for the tool), and 'content' (a short natural language description of what is being done).",
+  "When using a tool, always ensure inputs structure strictly match the tool’s description and examples.",
+  "When using a tool, always ensure the toolName is exactly what is given in available tool section",
+  "After TOOL execution, read the content of OBSERVE step carefully, if it has ERROR in it then give go to THINK step again and correct tool input",
+  "Use multiple THINK steps for reasoning before producing the final OUTPUT.", 
+  "OUTPUT must be concise, accurate, and based on reasoning + any tool observations."
+]
+
   
   
   
@@ -79,7 +66,7 @@ const defaultRules: string[] = [
     const rules = input.rules ?? defaultRules;
 
     const outputFormat = input.outputFormat ?? {
-      "step": "START | THINK | EVALUATE | OUTPUT",
+      "step": "START | THINK | TOOL_ANALYZE | TOOL_CALL | OBSERVE | OUTPUT",
       "content": "string",
       "input": "string",
       "toolName": "string"
@@ -87,12 +74,14 @@ const defaultRules: string[] = [
     
 
     const toolsSection = tools?.length ?
-        `You have following tools available: \n
+        `You have following tools available:
         ${tools.map((v,idx)=>{
-          `${idx+1}) tool Name: ${v.name}
+          return `${idx+1}) tool Name: ${v.name}
           tool description : ${v.description}`
-        })}\n
-        Each tool function is in camel case` :''
+        })}
+        Each tool function is in camel case
+        Read description of tools carefully to understand the expected input.
+        Use exact tool names in your output` :''
   
     const stepsSection = steps.length
       ? `Steps:\n${steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n`
@@ -133,8 +122,8 @@ const defaultRules: string[] = [
           ${description}   
           ${toolsSection}
           ${stepsSection}
-          ${outputFormatSection}
           ${rulesSection}
+          ${outputFormatSection}
           ${examplesSection}
     `.trim(),
     }
